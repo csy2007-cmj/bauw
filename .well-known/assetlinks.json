@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.bauw.workbench",
+        "sha256_cert_fingerprints": ["6D:EE:35:F3:4A:95:A0:F0:39:5B:3F:18:F7:7C:10:76:75:A2:78:0C:64:5A:38:CF:CD:67:09:27:36:76:CB:56"]
+      }
+    }]

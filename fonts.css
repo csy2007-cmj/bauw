@@ -1,0 +1,10 @@
+@font-face{
+  font-family: 'Press Start 2P';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('fonts/Press_Start_2P.woff2') format('woff2');
+}
+@font-face{
+  font-family: 'DotGothic16';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('fonts/DotGothic16.woff2') format('woff2');
+}
