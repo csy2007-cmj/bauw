@@ -12,12 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
-<!-- PDF.js & epub.js（读书器用） - 带CDN故障回退 -->
-<script src="pdf.min.js"></script>
-<script>try{if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='pdf.worker.min.js';}catch(e){}</script>
-<!-- epub.js：JSZip 本地优先（离线可读），失败再回退多 CDN -->
-<script src="jszip.min.js"></script>
-<script src="epub.min.js" onerror="loadEpubCDN()"></script>
+<!-- 重型读书库改为按需懒加载（开机不再阻塞首屏） -->
 <script>
 function loadEpubCDN(){
   if(typeof ePub!=='undefined')return;
@@ -25,7 +20,31 @@ function loadEpubCDN(){
   var i=0;
   (function next(){ if(typeof ePub!=='undefined')return; if(i>=SRC.length){console.warn('epub.js 全部源加载失败');return;} var s=document.createElement('script'); s.src=SRC[i++]; s.onload=function(){ if(typeof ePub==='undefined')next(); }; s.onerror=next; document.head.appendChild(s); })();
 }
-if(typeof ePub==='undefined') loadEpubCDN();
+var _libCache={};
+function ensureLib(name){
+  return new Promise(function(res,rej){
+    if(name==='pdf'&&typeof pdfjsLib!=='undefined'){res();return;}
+    if(name==='epub'&&typeof ePub!=='undefined'){res();return;}
+    if(_libCache[name]){_libCache[name].then(res,rej);return;}
+    var src=name==='pdf'?'pdf.min.js':name==='epub'?'epub.min.js':name;
+    var p=new Promise(function(r2,j2){
+      var s=document.createElement('script'); s.src=src;
+      s.onload=function(){
+        if(name==='pdf'&&window.pdfjsLib){ try{pdfjsLib.GlobalWorkerOptions.workerSrc='pdf.worker.min.js';}catch(e){} r2(); }
+        else if(name==='epub'&&window.ePub){ r2(); }
+        else { j2(new Error('lib '+name+' loaded but global missing')); }
+      };
+      s.onerror=function(){
+        if(name==='epub'){
+          loadEpubCDN();
+          var t=0; var iv=setInterval(function(){ if(typeof ePub!=='undefined'){clearInterval(iv);r2();} else if(++t>40){clearInterval(iv);j2(new Error('epub cdn failed'));} },200);
+        } else { j2(new Error('lib '+name+' load failed')); }
+      };
+      document.head.appendChild(s);
+    });
+    _libCache[name]=p; p.then(res,rej);
+  });
+}
 </script>
 <link rel="stylesheet" href="fonts.css">
 <style>
@@ -1026,8 +1045,8 @@ else document.addEventListener('DOMContentLoaded', loadBeacon);
 </div>
 <div id="bootLoader" class="boot-loader"><div class="px"></div><div class="t">小灯正在点亮工作台…</div></div>
 
-<script src="words.js" defer></script>
-<script src="dict.js" defer></script>
+<script src="words.js" async></script>
+<script src="dict.js" async></script>
 <script>
 /* ============================================================
    白的工作台 — 核心应用
@@ -5268,6 +5287,7 @@ function retryLoadBook(){_pdfDoc=null;_epubBook=null;_txtPages=null;_txtPage=_re
 function saveProgress(){if(!_readingBook)return;_readingBook.progress=_txtPage;save();}
 async function renderTxtPage(){return `<div style="white-space:pre-wrap;font-family:Georgia,serif">${escapeHtml(_txtPages[_txtPage-1]||'')}</div><div class="muted" style="text-align:center;margin-top:8px">第 ${_txtPage}/${_readingBook.total} 页 · ${(_txtPages[_txtPage-1]||'').length} 字</div>`;}
 async function renderPdfPage(){
+  await ensureLib('pdf');
   if(!_pdfDoc){const blob=await IDB.get(_readingBook.id);const buf=await blob.arrayBuffer();_pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;_readingBook.total=_pdfDoc.numPages;save();}
   if(_txtPage>_readingBook.total)_txtPage=_readingBook.total;
   const page=await _pdfDoc.getPage(_txtPage);const vp=page.getViewport({scale:1.2});const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');canvas.width=vp.width;canvas.height=vp.height;canvas.style.maxWidth='100%';canvas.style.height='auto';await page.render({canvasContext:ctx,viewport:vp}).promise;
@@ -5556,7 +5576,7 @@ R.read=function(){
           if(typeof pdfjsLib==='undefined'){area.innerHTML='<div class="muted" style="text-align:center;padding:20px">📕 PDF阅读器未加载（需要联网首次下载），<br><button class="pxbtn primary" onclick="retryLoadBook()" style="margin-top:8px">🔄 重试加载</button></div>';return;}
           area.innerHTML=await renderPdfPage();
         } else if(meta.type==='epub'){
-          if(typeof ePub==='undefined'){ let _t=0; const _iv=setInterval(function(){ if(typeof ePub!=='undefined'){clearInterval(_iv);retryLoadBook();} else if(++_t>30){clearInterval(_iv);area.innerHTML='<div class="muted" style="text-align:center;padding:20px">📗 EPUB阅读器加载失败（需联网首次下载解析库）。<br><button class="pxbtn primary" onclick="retryLoadBook()" style="margin-top:8px">🔄 重试加载</button></div>';} },200); return; }
+          await ensureLib('epub');
           area.innerHTML='<div id="epubArea" style="min-height:420px;background:var(--input-bg);border-radius:6px"></div>';
           if(!_epubBook){
             const blob=await IDB.get(meta.id);
