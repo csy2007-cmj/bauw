@@ -1,5 +1,5 @@
 /* BauW PWA Service Worker — 离线缓存 + 运行时缓存 */
-const CACHE = 'bauw-v19';
+const CACHE = 'bauw-v20';
 const CORE = [
   './',
   './index.html',
@@ -9,8 +9,6 @@ const CORE = [
   './icon-512.png',
   './dict.js',
   './words.js',
-  './jszip.min.js',
-  './epub.min.js',
   './fonts.css'
 ];
 
