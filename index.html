@@ -1649,10 +1649,13 @@ function render(){
   renderBottomTabs();
   renderTop();
   $("#sections").innerHTML = MODULES.map(m=>`<div class="section ${m.id===curMod?'active':''}" id="sec-${m.id}"></div>`).join("");
-  R[curMod] && R[curMod]();
+  // 单模块渲染出错不应拖垮整页（猫/主题/导航仍能正常工作）
+  try { R[curMod] && R[curMod](); } catch(e){ console.error('模块渲染失败:', e); try{ toast('该模块渲染出错，已跳过~','warn'); }catch(_){} }
   // 小猫只在主城显示，其他模块隐藏腾出空间
   const aside=document.querySelector('aside.right'); if(aside) aside.style.display = curMod==='dash'?'':'none';
-  if(curMod==='dash'){ $("#sections").parentElement.style.gridTemplateColumns='1fr 300px'; } else { $("#sections").parentElement.style.gridTemplateColumns='1fr'; }
+  // 响应式：窄屏（手机）强制单列，避免 300px 猫侧栏把主内容挤没（生存空间被压缩）
+  const _wide = (window.innerWidth||document.documentElement.clientWidth||0) >= 920;
+  if(curMod==='dash'){ $("#sections").parentElement.style.gridTemplateColumns = _wide ? '1fr 300px' : '1fr'; } else { $("#sections").parentElement.style.gridTemplateColumns='1fr'; }
   renderCat();
   updatePomoTask();
 }
@@ -6843,7 +6846,7 @@ function settingsHTML(){
     </div>
     <div class="panel-soft" style="margin-bottom:10px">
       <label class="muted">🎨 像素主题皮肤</label>
-      <select id="setTheme">
+      <select id="setTheme" onchange="document.body.setAttribute('data-theme',this.value)">
         <option ${S.profile.theme==="暖阳小屋"?"selected":""}>暖阳小屋</option>
         <option ${S.profile.theme==="晴空"?"selected":""}>晴空</option>
         <option ${S.profile.theme==="糖果工厂"?"selected":""}>糖果工厂</option>
@@ -7003,12 +7006,8 @@ function init(){
   }).filter((v,i,a)=>a.indexOf(v)===i);
   // 一次性主题升级
   if(!S._themeUpgraded && S.profile.theme==="复古终端"){ S.profile.theme="暖阳小屋"; S._themeUpgraded=true; save(); }
-  // 深色模式
-  const dm=S.profile.darkMode||"auto";
-  const isDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
-  if(dm==="auto"){ S.profile.theme=isDark?"暗夜森林":"暖阳小屋"; }
-  else if(dm==="dark"){ S.profile.theme="暗夜森林"; }
-  else if(dm==="light"){ S.profile.theme="暖阳小屋"; }
+  // 深色模式：不再用系统模式覆盖用户在「设置→像素主题皮肤」里显式选择的皮肤。
+  // 用户选的像素主题一律保留；只有从未选过（保持默认暖阳小屋）时才跟随系统。
   save();
   // 自由布局
   applyLayoutMode();
