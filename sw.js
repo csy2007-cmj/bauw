@@ -1,5 +1,5 @@
 /* BauW PWA Service Worker — 离线缓存 + 运行时缓存 */
-const CACHE = 'bauw-v21';
+const CACHE = 'bauw-v22';
 const CORE = [
   './',
   './index.html',
