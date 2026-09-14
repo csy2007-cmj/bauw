@@ -6846,7 +6846,7 @@ function settingsHTML(){
     </div>
     <div class="panel-soft" style="margin-bottom:10px">
       <label class="muted">🎨 像素主题皮肤</label>
-      <select id="setTheme" onchange="document.body.setAttribute('data-theme',this.value)">
+      <select id="setTheme" onchange="S.profile.theme=this.value;save();document.body.setAttribute('data-theme',this.value);try{toast('主题已切换为 '+this.value+'~','good');}catch(e){}">
         <option ${S.profile.theme==="暖阳小屋"?"selected":""}>暖阳小屋</option>
         <option ${S.profile.theme==="晴空"?"selected":""}>晴空</option>
         <option ${S.profile.theme==="糖果工厂"?"selected":""}>糖果工厂</option>
